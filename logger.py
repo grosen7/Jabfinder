@@ -2,7 +2,7 @@ from os import environ
 from datetime import datetime
 
 def writeToLog(log: str) -> None:
-    logFile = 'app.logger'
+    logFile = environ.get('LOGFILE')
 
     if logFile:
         f = open(logFile, "a")
