@@ -35,7 +35,3 @@ class db:
     def updateWelcomeSentStatus(self, emails: List[str]) -> None:
         query = queries["updateWelcomeSent"].format(",".join(["'{}'".format(email) for email in emails]))
         self.cur.execute(query)
-
-if __name__ == "__main__":
-    myDB = db()
-    data = myDB.getActiveContacts()
