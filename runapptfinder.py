@@ -4,7 +4,6 @@ from logger import error, info
 if __name__ == "__main__":
     try:
         finder = AppointmentFinder()
-        finder.sendWelcomeToNewContacts()
         contacts = finder.getContactsByState()
         
         for state in contacts:
@@ -14,6 +13,6 @@ if __name__ == "__main__":
                 emails = contacts[state]
                 finder.sendApptAvailableEmail(emails, state)
                 
-        info("Run complete!")
+        info("Appointment finder run complete!")
     except Exception as e:
         error(str(e))

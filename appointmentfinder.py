@@ -58,24 +58,6 @@ class AppointmentFinder():
 
         self.sendEmails(emails, msg, subject)
 
-    def sendWelcomeToNewContacts(self) -> None:
-        newUsers = []
-
-        for row in self.contacts:
-            welcomeSent = row['welcomeSent']
-        
-            if not welcomeSent:
-                newUsers.append(row['email'])
-        
-        if newUsers:
-            msg = ("Thank you for signing up with Jabfinder! If there is a CVS Covid "
-                    "vaccine appointment in your state you will get a notification from this "
-                    "address alerting you about the appointment.")
-            
-            self.sendEmails(newUsers, msg, "Welcome")
-            # update db so user doesn't receive anymore welcome emails
-            self.db.updateWelcomeSentStatus(newUsers)
-
     # construct and send email
     def sendEmails(self, receiverEmails: List[str], msg: str, subject: str) -> None:
         smtpServer = "smtp.gmail.com"
@@ -100,3 +82,30 @@ class AppointmentFinder():
                         error(str(e))
         else:
             raise Exception("Missing sender email and/or password")
+    
+    # sends welcome emails to new users
+    def sendWelcomeEmailToNewContacts(self) -> None:
+        newUsers = self.getNewContacts()
+        
+        if newUsers:
+            msg = ("Thank you for signing up with Jabfinder! If there is a CVS Covid "
+                    "vaccine appointment in your state you will get a notification from this "
+                    "address alerting you about the appointment.")
+            
+            self.sendEmails(newUsers, msg, "Welcome")
+
+        # update welcome sent email status
+        self.db.updateWelcomeSentStatus(newUsers)
+        
+    
+    # finds users who haven't had welcome emails sent
+    def getNewContacts(self) -> List[str]:
+        newUsers = []
+
+        for row in self.contacts:
+            welcomeSent = row['welcomeSent']
+        
+            if not welcomeSent:
+                newUsers.append(row['email'])
+        
+        return newUsers
