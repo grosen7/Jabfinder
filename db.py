@@ -5,6 +5,7 @@ import mysql.connector as msc
 from os import environ
 
 queries = {
+    "selEligibleContacts" : "SELECT * FROM contacts WHERE active = 1 AND dateEligible <= CURRENT_TIMESTAMP",
     "selActiveContacts" : "SELECT * FROM contacts WHERE active = 1",
     "updateWelcomeSent" : "UPDATE contacts SET welcomeSent = 1 WHERE email IN({})"
 }
@@ -25,6 +26,12 @@ class db:
         cnx = msc.connect(**config)
         cnx.autocommit = True
         return cnx
+
+    def getEligibleContacts(self) -> List[Dict[str, Any]]:
+        query = queries["selEligibleContacts"]
+        self.cur.execute(query)
+        data = self.cur.fetchall()
+        return data
 
     def getActiveContacts(self) -> List[Dict[str, Any]]:
         query = queries["selActiveContacts"]

@@ -10,13 +10,14 @@ class AppointmentFinder():
     def __init__(self) -> None:
         self.db = db()
         self.baseReqUrl = "https://www.cvs.com/immunizations/covid-19-vaccine.vaccine-status.{}.json?vaccineinfo"
-        self.contacts = self.db.getActiveContacts()
 
     # pulls contacts data from db and sorts contacts by state
     def getContactsByState(self) -> Dict[str, List[str]]:
         contactsByState = {}
+        # get eligible contacts only
+        contacts = self.db.getEligibleContacts()
 
-        for row in self.contacts:
+        for row in contacts:
             state = row['state']
             email = row['email']
 
@@ -101,8 +102,9 @@ class AppointmentFinder():
     # finds users who haven't had welcome emails sent
     def getNewContacts(self) -> List[str]:
         newUsers = []
+        activeEmails = self.db.getActiveContacts()
 
-        for row in self.contacts:
+        for row in activeEmails:
             welcomeSent = row['welcomeSent']
         
             if not welcomeSent:
