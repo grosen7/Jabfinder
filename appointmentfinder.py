@@ -94,9 +94,8 @@ class AppointmentFinder():
                     "address alerting you about the appointment.")
             
             self.sendEmails(newUsers, msg, "Welcome")
-
-        # update welcome sent email status
-        self.db.updateWelcomeSentStatus(newUsers)
+            # update welcome sent email status
+            self.db.updateWelcomeSentStatus(newUsers)
         
     
     # finds users who haven't had welcome emails sent
