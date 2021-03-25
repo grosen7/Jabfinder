@@ -1,5 +1,5 @@
-from appointmentfinder import AppointmentFinder
-from logger import error, info
+from classes.appointmentfinder import AppointmentFinder
+from classes.logger import error, info
 
 if __name__ == "__main__":
     try:
@@ -7,11 +7,11 @@ if __name__ == "__main__":
         contacts = finder.getContactsByState()
         
         for state in contacts:
-            available = finder.isStateAvailable(state)
+            available = finder.isStateAvailableCvs(state)
 
             if available:
                 emails = contacts[state]
-                finder.sendApptAvailableEmail(emails, state)
+                finder.sendApptAvailableEmailCvs(emails, state)
                 
         info("Appointment finder run complete!")
     except Exception as e:

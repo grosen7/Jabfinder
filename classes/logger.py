@@ -1,6 +1,9 @@
 from os import environ
 from datetime import datetime
 
+#TODO: Add in functionality to archive log after a day
+# and create log for new day
+
 def writeToLog(log: str) -> None:
     logFile = environ.get('LOGFILE')
 

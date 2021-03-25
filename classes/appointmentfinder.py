@@ -1,15 +1,18 @@
 from os import environ
-from db import db
+from classes.db import db
 from typing import Dict, List, Any
 from requests import get
 from email.message import EmailMessage
-from logger import info, error
+from classes.logger import info, error
 import smtplib
+
+baseURLs = {
+    "CVS": "https://www.cvs.com/immunizations/covid-19-vaccine.vaccine-status.{}.json?vaccineinfo"
+}
 
 class AppointmentFinder():
     def __init__(self) -> None:
         self.db = db()
-        self.baseReqUrl = "https://www.cvs.com/immunizations/covid-19-vaccine.vaccine-status.{}.json?vaccineinfo"
 
     # pulls contacts data from db and sorts contacts by state
     def getContactsByState(self) -> Dict[str, List[str]]:
@@ -29,17 +32,17 @@ class AppointmentFinder():
         return contactsByState
 
     # pulls data from cvs api about open appointments
-    def getApptDataForState(self, state: str) -> Any:
-        reqUrl = self.baseReqUrl.format(state)
+    def getApptDataForStateCvs(self, state: str) -> Any:
+        reqUrl = baseURLs["CVS"].format(state)
         headers = {'Referer': 'https://www.cvs.com/immunizations/covid-19-vaccine'}
         req = get(url=reqUrl, headers=headers)
         apptData = req.json()['responsePayloadData']
         return apptData
 
     # checks if there are any appointments available in a state
-    def isStateAvailable(self, state: str) -> bool:
+    def isStateAvailableCvs(self, state: str) -> bool:
         try:
-            respData = self.getApptDataForState(state)
+            respData = self.getApptDataForStateCvs(state)
             stateData = respData['data']
             bookingComplete = respData['isBookingCompleted']
         except Exception as e:
@@ -51,7 +54,7 @@ class AppointmentFinder():
 
     # sends emails about available appointments to any email
     # associated with the state
-    def sendApptAvailableEmail(self, emails: List[str], state: str) -> None:
+    def sendApptAvailableEmailCvs(self, emails: List[str], state: str) -> None:
         subject = "Available Appointment"
         msg = ("There are CVS Covid vaccine appointments available in {}! "
                 "Click {} to book your appointment now."
@@ -59,6 +62,7 @@ class AppointmentFinder():
 
         self.sendEmails(emails, msg, subject)
 
+    # TODO: move send emails functionality into util class
     # construct and send email
     def sendEmails(self, receiverEmails: List[str], msg: str, subject: str) -> None:
         smtpServer = "smtp.gmail.com"
@@ -84,6 +88,7 @@ class AppointmentFinder():
         else:
             raise Exception("Missing sender email and/or password")
     
+    #TODO: move welcome email functionality into seperate class
     # sends welcome emails to new users
     def sendWelcomeEmailToNewContacts(self) -> None:
         newUsers = self.getNewContacts()

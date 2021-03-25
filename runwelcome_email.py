@@ -1,5 +1,5 @@
-from appointmentfinder import AppointmentFinder
-from logger import error, info
+from classes.appointmentfinder import AppointmentFinder
+from classes.logger import error, info
 
 if __name__ == "__main__":
     try:
