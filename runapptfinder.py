@@ -7,7 +7,7 @@ if __name__ == "__main__":
         contacts = finder.getContactsByState()
         
         for state in contacts:
-            available = finder.isStateAvailableCvs(state)
+            available = finder.checkStateAvailability(state)
 
             if available:
                 emails = contacts[state]

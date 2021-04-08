@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 from requests import get
 from email.message import EmailMessage
 from classes.logger import info, error
+from datetime import datetime
 import smtplib
 
 baseURLs = {
@@ -13,6 +14,7 @@ baseURLs = {
 class AppointmentFinder():
     def __init__(self) -> None:
         self.db = db()
+        self.statesUpdated = self.getUpdatedTsByState()
 
     # pulls contacts data from db and sorts contacts by state
     def getContactsByState(self) -> Dict[str, List[str]]:
@@ -31,6 +33,17 @@ class AppointmentFinder():
 
         return contactsByState
 
+    def getUpdatedTsByState(self) -> Dict[str, datetime]:
+        statesUpdated = {}
+        times = self.db.getStateUpdatedTs()
+
+        for row in times:
+            state = row['state']
+            updated = row['updated']
+            statesUpdated[state] = updated
+
+        return statesUpdated
+
     # pulls data from cvs api about open appointments
     def getApptDataForStateCvs(self, state: str) -> Any:
         reqUrl = baseURLs["CVS"].format(state)
@@ -39,18 +52,61 @@ class AppointmentFinder():
         apptData = req.json()['responsePayloadData']
         return apptData
 
-    # checks if there are any appointments available in a state
-    def isStateAvailableCvs(self, state: str) -> bool:
+    # checks if there are any open appointments in a state
+    def openStateApts(self, respData: Dict[str, Any]) -> bool:
+        stateData = respData['data']
+        bookingComplete = respData['isBookingCompleted']
+        return stateData and not bookingComplete
+
+    # checks if there are available apts in a state
+    # and if the state ts has been refreshed
+    # updates ts if it has been refreshed
+    def checkStateAvailability(self, state: str) -> bool:
+        apts = False
+        tsOld = False
+        
         try:
             respData = self.getApptDataForStateCvs(state)
-            stateData = respData['data']
-            bookingComplete = respData['isBookingCompleted']
+            apts = self.openStateApts(respData)
+            respTs = respData['currentTime']
+            parsedTs = self.parseTs(respTs)
+            tsOld = self.isStateUpdatedTsOld(state, parsedTs)
+            if tsOld: self.updateStateTs(state, parsedTs)
         except Exception as e:
-            stateData = False
-            bookingComplete = False
             error(str(e))
 
-        return stateData and not bookingComplete
+        return apts and tsOld
+
+    # parses ts from cvs data
+    def parseTs(self, ts: str) -> datetime:
+        parsed = datetime(1, 1, 1)
+
+        if 'T' in ts:
+            splitTs = ts.split('T')
+
+            if len(splitTs) >= 2:
+                tsStr = '{} {}'.format(splitTs[0], splitTs[1])
+                parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
+
+        return parsed
+                
+
+
+    # checks if the appointment data has been refreshed
+    def isStateUpdatedTsOld(self, state: str, respTs: datetime) -> bool:
+        tsOld = False
+
+        if state in self.statesUpdated:
+            curTs = self.statesUpdated[state]
+            tsOld = respTs > curTs
+
+        return tsOld
+
+    def updateStateTs(self, state: str, ts: datetime) -> None:
+        self.db.updateStateUpdatedTs(ts, state)
+
+        if state in self.statesUpdated:
+            self.statesUpdated[state] = ts
 
     # sends emails about available appointments to any email
     # associated with the state
@@ -62,7 +118,6 @@ class AppointmentFinder():
 
         self.sendEmails(emails, msg, subject)
 
-    # TODO: move send emails functionality into util class
     # construct and send email
     def sendEmails(self, receiverEmails: List[str], msg: str, subject: str) -> None:
         smtpServer = "smtp.gmail.com"
@@ -88,7 +143,6 @@ class AppointmentFinder():
         else:
             raise Exception("Missing sender email and/or password")
     
-    #TODO: move welcome email functionality into seperate class
     # sends welcome emails to new users
     def sendWelcomeEmailToNewContacts(self) -> None:
         newUsers = self.getNewContacts()
