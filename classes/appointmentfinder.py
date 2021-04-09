@@ -75,20 +75,24 @@ class AppointmentFinder():
     # parses ts from cvs data
     def parseCvsTs(self, cvsRespData: Any) -> datetime:
         roundedParsed = datetime(1, 1, 1)
-        ts = ""
 
-        if "currentTime" in cvsRespData:
-            ts = cvsRespData["currentTime"]
+        try:
+            ts = ""
 
-        if 'T' in ts:
-            splitTs = ts.split('T')
+            if "currentTime" in cvsRespData:
+                ts = cvsRespData["currentTime"]
 
-            if len(splitTs) >= 2:
-                tsStr = '{} {}'.format(splitTs[0], splitTs[1])
-                parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
-                # create new dt object that is rounded to nearest second
-                roundedParsed = datetime(parsed.year, parsed.month, parsed.day, 
-                    parsed.hour, parsed.minute, parsed.second)
+            if 'T' in ts:
+                splitTs = ts.split('T')
+
+                if len(splitTs) >= 2:
+                    tsStr = '{} {}'.format(splitTs[0], splitTs[1])
+                    parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
+                    # create new dt object that is rounded to nearest second
+                    roundedParsed = datetime(parsed.year, parsed.month, parsed.day, 
+                        parsed.hour, parsed.minute, parsed.second)
+        except Exception as e:
+            error(str(e))
 
         return roundedParsed
 
@@ -108,28 +112,31 @@ class AppointmentFinder():
 
     # construct and send email
     def sendEmails(self, receiverEmails: List[str], msg: str, subject: str) -> None:
-        smtpServer = "smtp.gmail.com"
-        senderEmail = environ.get('SENDEREMAIL')
-        password = environ.get('EMAILPWD')
+        try:
+            smtpServer = "smtp.gmail.com"
+            senderEmail = environ.get('SENDEREMAIL')
+            password = environ.get('EMAILPWD')
 
-        if senderEmail and password:
-            with smtplib.SMTP_SSL(smtpServer, 465) as server:
-                server.login(senderEmail, password)
+            if senderEmail and password:
+                with smtplib.SMTP_SSL(smtpServer, 465) as server:
+                    server.login(senderEmail, password)
 
-                for email in receiverEmails:
-                    try:
-                        emailMsg = EmailMessage()
-                        emailMsg.set_content(msg)
-                        emailMsg['Subject'] = subject
-                        emailMsg['From'] = senderEmail
-                        emailMsg['To'] = email
-                        server.send_message(emailMsg)
-                        info("{} Email sent to {}".format(subject, email))
-                    except Exception as e:
-                        # log error
-                        error(str(e))
-        else:
-            raise Exception("Missing sender email and/or password")
+                    for email in receiverEmails:
+                        try:
+                            emailMsg = EmailMessage()
+                            emailMsg.set_content(msg)
+                            emailMsg['Subject'] = subject
+                            emailMsg['From'] = senderEmail
+                            emailMsg['To'] = email
+                            server.send_message(emailMsg)
+                            info("{} Email sent to {}".format(subject, email))
+                        except Exception as e:
+                            # log error
+                            error(str(e))
+            else:
+                raise Exception("Missing sender email and/or password")
+        except Exception as e:
+            error(str(e))
     
     # sends welcome emails to new users
     def sendWelcomeEmailToNewContacts(self) -> None:
