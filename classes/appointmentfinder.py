@@ -74,7 +74,7 @@ class AppointmentFinder():
 
     # parses ts from cvs data
     def parseCvsTs(self, cvsRespData: Any) -> datetime:
-        parsed = datetime(1, 1, 1)
+        roundedParsed = datetime(1, 1, 1)
         ts = ""
 
         if "currentTime" in cvsRespData:
@@ -86,8 +86,11 @@ class AppointmentFinder():
             if len(splitTs) >= 2:
                 tsStr = '{} {}'.format(splitTs[0], splitTs[1])
                 parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
+                # create new dt object that is rounded to nearest second
+                roundedParsed = datetime(parsed.year, parsed.month, parsed.day, 
+                    parsed.hour, parsed.minute, parsed.second)
 
-        return parsed
+        return roundedParsed
 
     # updates ts for state in db
     def updateStateTs(self, state: str, ts: datetime) -> None:
