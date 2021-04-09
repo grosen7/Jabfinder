@@ -14,7 +14,6 @@ baseURLs = {
 class AppointmentFinder():
     def __init__(self) -> None:
         self.db = db()
-        self.statesUpdated = self.getUpdatedTsByState()
 
     # pulls contacts data from db and sorts contacts by state
     def getContactsByState(self) -> Dict[str, List[str]]:
@@ -46,40 +45,40 @@ class AppointmentFinder():
 
     # pulls data from cvs api about open appointments
     def getApptDataForStateCvs(self, state: str) -> Any:
-        reqUrl = baseURLs["CVS"].format(state)
-        headers = {'Referer': 'https://www.cvs.com/immunizations/covid-19-vaccine'}
-        req = get(url=reqUrl, headers=headers)
-        apptData = req.json()['responsePayloadData']
+        apptData = None
+
+        try:
+            reqUrl = baseURLs["CVS"].format(state)
+            headers = {'Referer': 'https://www.cvs.com/immunizations/covid-19-vaccine'}
+            req = get(url=reqUrl, headers=headers)
+            apptData = req.json()['responsePayloadData']
+        except Exception as e:
+            error(str(e))
+
         return apptData
 
     # checks if there are any open appointments in a state
     def openStateApts(self, respData: Dict[str, Any]) -> bool:
-        stateData = respData['data']
-        bookingComplete = respData['isBookingCompleted']
-        return stateData and not bookingComplete
+        stateData = None
+        bookingComplete = True
+        availableApts = False
 
-    # checks if there are available apts in a state
-    # and if the state ts has been refreshed
-    # updates ts if it has been refreshed
-    def checkStateAvailability(self, state: str) -> bool:
-        apts = False
-        tsOld = False
-        
-        try:
-            respData = self.getApptDataForStateCvs(state)
-            apts = self.openStateApts(respData)
-            respTs = respData['currentTime']
-            parsedTs = self.parseTs(respTs)
-            tsOld = self.isStateUpdatedTsOld(state, parsedTs)
-            if tsOld: self.updateStateTs(state, parsedTs)
-        except Exception as e:
-            error(str(e))
+        if "data" in respData:
+            stateData = respData['data']
+        if "isBookingCompleted" in respData:
+            bookingComplete = respData['isBookingCompleted']
+        if stateData and not bookingComplete:
+            availableApts = True
 
-        return apts and tsOld
+        return availableApts
 
     # parses ts from cvs data
-    def parseTs(self, ts: str) -> datetime:
+    def parseCvsTs(self, cvsRespData: Any) -> datetime:
         parsed = datetime(1, 1, 1)
+        ts = ""
+
+        if "currentTime" in cvsRespData:
+            ts = cvsRespData["currentTime"]
 
         if 'T' in ts:
             splitTs = ts.split('T')
@@ -89,24 +88,10 @@ class AppointmentFinder():
                 parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
 
         return parsed
-                
 
-
-    # checks if the appointment data has been refreshed
-    def isStateUpdatedTsOld(self, state: str, respTs: datetime) -> bool:
-        tsOld = False
-
-        if state in self.statesUpdated:
-            curTs = self.statesUpdated[state]
-            tsOld = respTs > curTs
-
-        return tsOld
-
+    # updates ts for state in db
     def updateStateTs(self, state: str, ts: datetime) -> None:
         self.db.updateStateUpdatedTs(ts, state)
-
-        if state in self.statesUpdated:
-            self.statesUpdated[state] = ts
 
     # sends emails about available appointments to any email
     # associated with the state

@@ -5,11 +5,24 @@ if __name__ == "__main__":
     try:
         finder = AppointmentFinder()
         contacts = finder.getContactsByState()
+        statesUpdated = finder.getUpdatedTsByState()
         
         for state in contacts:
-            available = finder.checkStateAvailability(state)
+            cvsData = finder.getApptDataForStateCvs(state)
+            aptsAvailable = finder.openStateApts(cvsData)
+            parsedTs = finder.parseCvsTs(cvsData)
+            tsIsOld = True
 
-            if available:
+            if state in statesUpdated:
+                curTs = statesUpdated[state]
+                tsIsOld = parsedTs > curTs
+
+                if tsIsOld:
+                    finder.updateStateTs(state, parsedTs)
+                    statesUpdated[state] = parsedTs
+                    info("{} appointment data timestamp updated to {}".format(state.upper(), parsedTs))
+
+            if tsIsOld and aptsAvailable:
                 emails = contacts[state]
                 finder.sendApptAvailableEmailCvs(emails, state)
                 
