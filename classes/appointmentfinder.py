@@ -75,24 +75,29 @@ class AppointmentFinder():
     # parses ts from cvs data
     def parseCvsTs(self, cvsRespData: Any) -> datetime:
         roundedParsed = datetime(1, 1, 1)
+        ts = ""
 
-        try:
-            ts = ""
+        if "currentTime" in cvsRespData:
+            ts = cvsRespData["currentTime"]
 
-            if "currentTime" in cvsRespData:
-                ts = cvsRespData["currentTime"]
+        if 'T' in ts:
+            splitTs = ts.split('T')
 
-            if 'T' in ts:
-                splitTs = ts.split('T')
+            if len(splitTs) >= 2:
+                formats = ['%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S']
 
-                if len(splitTs) >= 2:
-                    tsStr = '{} {}'.format(splitTs[0], splitTs[1])
-                    parsed = datetime.strptime(tsStr, '%Y-%m-%d %H:%M:%S.%f')
-                    # create new dt object that is rounded to nearest second
-                    roundedParsed = datetime(parsed.year, parsed.month, parsed.day, 
-                        parsed.hour, parsed.minute, parsed.second)
-        except Exception as e:
-            error(str(e))
+                # try multiple different formats as it could
+                # be either of them
+                for format in formats:
+                    try:
+                        tsStr = '{} {}'.format(splitTs[0], splitTs[1])
+                        parsed = datetime.strptime(tsStr, format)
+                        # create new dt object that is rounded to nearest second
+                        roundedParsed = datetime(parsed.year, parsed.month, parsed.day, 
+                            parsed.hour, parsed.minute, parsed.second)
+                        break
+                    except Exception as e:
+                        error(str(e))
 
         return roundedParsed
 
